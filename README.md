@@ -25,7 +25,7 @@ A fun Pong game where you can use your own images as paddles!
 
 ## Demo
 
-Try it live: [Play Now](https://vkhanna529.github.io/pong-game/)
+Try it live: [Play Now](https://khanna-consulting.github.io/pong-game/)
 
 ## Technology
 
