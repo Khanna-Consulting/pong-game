@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Pong Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+
+        #container {
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #setup {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .player-setup {
+            display: inline-block;
+            margin: 20px;
+            vertical-align: top;
+        }
+
+        .drop-zone {
+            width: 200px;
+            height: 300px;
+            border: 3px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover {
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .drop-zone.drag-over {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.2);
+            transform: scale(1.05);
+        }
+
+        .drop-zone.has-image {
+            border-style: solid;
+            border-color: #4ade80;
+        }
+
+        .drop-zone img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .drop-zone-text {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .player-label {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        #startBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        #startBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        #startBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #gameCanvas {
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        #score {
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .instructions {
+            margin-top: 15px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        #controls {
+            margin-top: 15px;
+            font-size: 1.1em;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Custom Pong Game</h1>
+
+        <div id="setup">
+            <div class="player-setup">
+                <div class="player-label">Player 1</div>
+                <div class="drop-zone" id="player1Zone">
+                    <div class="drop-zone-text">
+                        <p>📁 Drag & Drop</p>
+                        <p>or</p>
+                        <p>Click to Select</p>
+                        <p style="margin-top: 10px; font-size: 0.8em;">Your Paddle Image</p>
+                    </div>
+                </div>
+                <input type="file" id="player1Input" accept="image/*" style="display: none;">
+            </div>
+
+            <div class="player-setup">
+                <div class="player-label">Player 2</div>
+                <div class="drop-zone" id="player2Zone">
+                    <div class="drop-zone-text">
+                        <p>📁 Drag & Drop</p>
+                        <p>or</p>
+                        <p>Click to Select</p>
+                        <p style="margin-top: 10px; font-size: 0.8em;">Your Paddle Image</p>
+                    </div>
+                </div>
+                <input type="file" id="player2Input" accept="image/*" style="display: none;">
+            </div>
+
+            <div style="clear: both;"></div>
+
+            <button id="startBtn" disabled>Start Game</button>
+
+            <div class="instructions">
+                <strong>Controls:</strong><br>
+                Player 1: W (up) / S (down)<br>
+                Player 2: ↑ (up) / ↓ (down)
+            </div>
+        </div>
+
+        <div id="gameArea" class="hidden">
+            <div id="score">Player 1: 0 | Player 2: 0</div>
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <div id="controls">
+                <button id="resetBtn" style="padding: 10px 30px; font-size: 1em; border-radius: 25px; border: none; cursor: pointer; background: #4ade80; color: white; margin-top: 10px;">New Game</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let player1Image = null;
+        let player2Image = null;
+        let gameRunning = false;
+
+        // Setup drag and drop for both players
+        setupDropZone('player1', 'player1Zone', 'player1Input');
+        setupDropZone('player2', 'player2Zone', 'player2Input');
+
+        function setupDropZone(player, zoneId, inputId) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(inputId);
+
+            // Click to select file
+            zone.addEventListener('click', () => input.click());
+
+            // File input change
+            input.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0], player, zone);
+                }
+            });
+
+            // Drag and drop events
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+
+                if (e.dataTransfer.files.length > 0) {
+                    handleFile(e.dataTransfer.files[0], player, zone);
+                }
+            });
+        }
+
+        function handleFile(file, player, zone) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    if (player === 'player1') {
+                        player1Image = img;
+                    } else {
+                        player2Image = img;
+                    }
+
+                    // Update drop zone
+                    zone.innerHTML = '';
+                    zone.appendChild(img);
+                    zone.classList.add('has-image');
+
+                    // Check if both images are loaded
+                    updateStartButton();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateStartButton() {
+            const startBtn = document.getElementById('startBtn');
+            if (player1Image && player2Image) {
+                startBtn.disabled = false;
+            }
+        }
+
+        // Start game
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+        function startGame() {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('gameArea').classList.remove('hidden');
+            document.getElementById('gameCanvas').style.display = 'block';
+            gameRunning = true;
+            initGame();
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            document.getElementById('gameArea').classList.add('hidden');
+            document.getElementById('setup').style.display = 'block';
+            score1 = 0;
+            score2 = 0;
+        }
+
+        // Game logic
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const PADDLE_WIDTH = 80;
+        const PADDLE_HEIGHT = 80;
+        const BALL_SIZE = 10;
+        const PADDLE_SPEED = 6;
+
+        let score1 = 0;
+        let score2 = 0;
+
+        let paddle1 = {
+            x: 20,
+            y: canvas.height / 2 - PADDLE_HEIGHT / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            dy: 0
+        };
+
+        let paddle2 = {
+            x: canvas.width - 20 - PADDLE_WIDTH,
+            y: canvas.height / 2 - PADDLE_HEIGHT / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            dy: 0
+        };
+
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            dx: 4,
+            dy: 4,
+            size: BALL_SIZE
+        };
+
+        // Keyboard controls
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        function initGame() {
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Player 1 controls (W/S)
+            if (keys['w'] || keys['W']) {
+                paddle1.dy = -PADDLE_SPEED;
+            } else if (keys['s'] || keys['S']) {
+                paddle1.dy = PADDLE_SPEED;
+            } else {
+                paddle1.dy = 0;
+            }
+
+            // Player 2 controls (Arrow keys)
+            if (keys['ArrowUp']) {
+                paddle2.dy = -PADDLE_SPEED;
+            } else if (keys['ArrowDown']) {
+                paddle2.dy = PADDLE_SPEED;
+            } else {
+                paddle2.dy = 0;
+            }
+
+            // Update paddle positions
+            paddle1.y += paddle1.dy;
+            paddle2.y += paddle2.dy;
+
+            // Keep paddles in bounds
+            paddle1.y = Math.max(0, Math.min(canvas.height - PADDLE_HEIGHT, paddle1.y));
+            paddle2.y = Math.max(0, Math.min(canvas.height - PADDLE_HEIGHT, paddle2.y));
+
+            // Update ball position
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Ball collision with top and bottom
+            if (ball.y <= 0 || ball.y >= canvas.height - ball.size) {
+                ball.dy *= -1;
+            }
+
+            // Ball collision with paddles
+            if (ball.x <= paddle1.x + paddle1.width &&
+                ball.y + ball.size >= paddle1.y &&
+                ball.y <= paddle1.y + paddle1.height) {
+                ball.dx = Math.abs(ball.dx);
+                // Add spin based on where it hit the paddle
+                const hitPos = (ball.y - paddle1.y) / paddle1.height;
+                ball.dy = (hitPos - 0.5) * 8;
+            }
+
+            if (ball.x + ball.size >= paddle2.x &&
+                ball.y + ball.size >= paddle2.y &&
+                ball.y <= paddle2.y + paddle2.height) {
+                ball.dx = -Math.abs(ball.dx);
+                // Add spin based on where it hit the paddle
+                const hitPos = (ball.y - paddle2.y) / paddle2.height;
+                ball.dy = (hitPos - 0.5) * 8;
+            }
+
+            // Scoring
+            if (ball.x < 0) {
+                score2++;
+                updateScore();
+                resetBall();
+            } else if (ball.x > canvas.width) {
+                score1++;
+                updateScore();
+                resetBall();
+            }
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw center line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw paddle 1 (custom image)
+            ctx.drawImage(player1Image, paddle1.x, paddle1.y, paddle1.width, paddle1.height);
+
+            // Draw paddle 2 (custom image)
+            ctx.drawImage(player2Image, paddle2.x, paddle2.y, paddle2.width, paddle2.height);
+
+            // Draw ball
+            ctx.fillStyle = '#4ade80';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#4ade80';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * 4;
+            ball.dy = (Math.random() - 0.5) * 6;
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = `Player 1: ${score1} | Player 2: ${score2}`;
+        }
+    </script>
+</body>
+</html>
